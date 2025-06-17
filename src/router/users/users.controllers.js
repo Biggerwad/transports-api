@@ -1,7 +1,6 @@
 const Users = require('../../model/user.mongo');
 const Operator = require('../../model/operator.mongo');
 
-
 // Return all registered users
 async function getUsers(req, res) {
     try {
@@ -55,45 +54,41 @@ async function addUser(req, res) {
 
         return res.status(201).json({
             data: newUser,
+            ok: true,
         });
 
     } catch (err) {
-        return res.status(500).json({ message: err});
+        return res.status(500).json({ message: err });
     }
 }
 
-// Delete a user by name
-async function deleteUser(req, res) {
+// Delete Request:
+async function deleteRequest(req, res) {
+    if (!req.body) {
+        return res.status(400).json({ message: "Request body is missing" });
+    }
+
+    const { id } = req.body;
+
+    if (!id) {
+        return res.status(400).json({ message: "Missing required ID" });
+    }
+
     try {
-        const { fullName } = req.body; //change fullname if other parameter are to be used
-        const users = await Users.deleteOne({fullName});
-        return res.status(200).json(users);
+        // Check if user exists
+        let userExist = await Users.findOne({ _id: id });
+
+        if (!userExist) {
+            return res.status(404).json({ message: "User does not exist" });
+        }
+
+        // Delete user from the database
+        await Users.deleteOne({ _id: id });
+
+        return res.status(200).json({ message: "Request deleted successfully" });
     } catch (err) {
-        return res.status(500).json({ message: err.message });
+        return res.status(500).json({ message: "Internal Server Error", error: err.message });
     }
 }
 
-// Edit all user information with their assigned operator's ID
-// async function assignOperator(req, res) {
-//     const { opId, geolocation } = req.body;
-
-//     let operatorExists;
-//     try {
-//         operatorExists = await Users.updateMany(
-//             { geolocation: geolocation },
-//             { $set: { operatorId: opId } },
-//             { new: true }
-//         );
-
-//         if (operatorExists) {
-//             res.status(201).json(operatorExists)
-//             console.log(operatorExists);
-//         } else {
-//             res.status(401).json("Error assigning operator")
-//         }
-//     } catch (err) {
-//         res.status(500).json(err)
-//     }
-// }
-
-module.exports = { getUsers, addUser, deleteUser};
+module.exports = { getUsers, addUser, deleteRequest };
