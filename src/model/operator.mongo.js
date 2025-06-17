@@ -10,6 +10,10 @@ const operatorSchema = new mongoose.Schema({
         required: true,
         unique: true,
     },
+    password: {
+        type: String,
+        // will make this required when operator schema is reviewed
+    },
     privilege: {
         type: String,
         required: true,
@@ -20,4 +24,3 @@ const operatorSchema = new mongoose.Schema({
 )
 
 module.exports = mongoose.model('Operator', operatorSchema);
-

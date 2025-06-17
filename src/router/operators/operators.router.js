@@ -5,6 +5,7 @@ const {
     httpsAddOperator,
     httpsAddContainer,
     modifyOperator,
+    signupAdmin,
     loginOperator,
     updateRequest,
     httpsGetContainers,
@@ -17,6 +18,7 @@ const operatorRoute = express.Router();
 
 operatorRoute.get('/', httpsGetOperators);
 operatorRoute.post('/', loginOperator)
+operatorRoute.post('/signup', signupAdmin)
 
 operatorRoute.post('/add', httpsAddOperator);
 operatorRoute.post('/modify', modifyOperator);
