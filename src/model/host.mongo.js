@@ -1,22 +1,21 @@
 const mongoose = require('mongoose');
 
-const operatorSchema = new mongoose.Schema({
-    fullName: {
+const hostSchema = new mongoose.Schema({
+    username: {
         type: String,
         required: true,
     },
     email: {
         type: String,
         required: true,
-        unique: true,
     },
-    privilege: {
+    password: {
         type: String,
         required: true,
-    }
+    },
+
 },
     { timestamps: true }
-
 )
 
-module.exports = mongoose.model('Operator', operatorSchema);
+module.exports = mongoose.Model('Host', hostSchema);

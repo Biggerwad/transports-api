@@ -38,7 +38,7 @@ async function httpsAddOperator(req, res) {
     const {
         fullName,
         email,
-        privilege
+        privilege,
     } = req.body
 
     let existingOperator;
@@ -119,7 +119,6 @@ async function loginOperator(req, res) {
 
     try {
         operatorExists = await operators.findOne({ email: email });
-
         if (operatorExists) {
             return res.status(200).json({ success: true, operator: operatorExists });
         } else {
@@ -130,34 +129,35 @@ async function loginOperator(req, res) {
     }
 }
 
-async function signupAdmin(req, res) {
-    const { hostName, email, password } = req.body;
+async function signupHost(req, res) {
+    const { username, email, password } = req.body;
 
     // check if account exists already
-    const userExist = await operators.findOne({ email })
+    const userExist = await operators.findOne({ email: email })
 
     try {
         if (!userExist) {
             // create account for host
-            const newUser = await new operators({
-                fullName: hostName,
+            const newHost = await new operators({
+                username: hostName,
                 email,
                 password: string(bcrypt.hash(password, 10)),
                 privilege: "Admin",
-            }).save()
+            }).save();
 
-            if (newUser) {
-                return res.status(201).json({
-                    hostname: newUser.hostName,
-                });
-            }
+            // if (newHost) {
+            return res.status(201).json({
+                username: newHost.hostName,
+            });
+            // };
 
         } else {
             return res.status(403).json({ data: "user already exists" });
         }
+
     } catch (err) {
-        return res.json({
-            data: "Error", err
+        res.status(500).json({
+            err
         })
     }
 }
@@ -214,7 +214,7 @@ module.exports = {
     httpsGetOperators,
     httpsGetContainers,
     loginOperator,
-    signupAdmin,
+    signupHost,
     httpsAddOperator,
     httpsAddContainer,
     modifyOperator,
