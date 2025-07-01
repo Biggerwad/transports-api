@@ -1,4 +1,5 @@
 const operators = require('../../model/operator.mongo');
+const host = require('../../model/host.mongo');
 const Container = require('../../model/container.mongo');
 const Users = require('../../model/user.mongo');
 const FormStatus = require('../../model/formStatus');
@@ -112,44 +113,66 @@ async function httpsAddContainer(req, res) {
     }
 };
 
-// Login opertaor
+// Login host
 async function loginOperator(req, res) {
-    const { email } = req.body;
-    let operatorExists;
+    const { username, email } = req.body;
+    let hostExist;
 
     try {
-        operatorExists = await operators.findOne({ email: email });
-        if (operatorExists) {
-            return res.status(200).json({ success: true, operator: operatorExists });
+        hostExist = await host.findOne({ username, email: email });
+        if (hostExist) {
+            return res.status(200).json({ ok: true, operator: hostExist });
         } else {
-            return res.status(401).json({ success: false, msg: "Operator does not exist" })
+            return res.status(401).json({ ok: false, msg: "Operator does not exist" })
         }
     } catch (err) {
-        msg: err
+        return res.status(500).json({ msg: err });
+    };
+
+};
+
+async function signinHost(req, res) {
+    const { username, password } = req.body;
+
+    // look up this host first
+    const hostExist = await host.findOne({ username });
+
+    if (hostExist) {
+        // check for valid password
+        let passwordValid = bcrypt.compare(password, hostExist.password);
+
+        if (!passwordValid) return res.status(401).json({ msg: "Incorrect credentials" })
+
+        return res.status(200).json({
+            // token:
+            msg: "login successful"
+        })
+        
+        // give host a session ID and sign jwt token
     }
-}
+};
 
 async function signupHost(req, res) {
     const { username, email, password } = req.body;
 
     // check if account exists already
-    const userExist = await operators.findOne({ email: email })
 
     try {
-        if (!userExist) {
+        const hostExist = await host.findOne({ username, email: email });
+
+        if (!hostExist) {
             // create account for host
-            const newHost = await new operators({
-                username: hostName,
-                email,
-                password: string(bcrypt.hash(password, 10)),
-                privilege: "Admin",
+            const newHost = await new host({
+                username: username,
+                email: email,
+                password: String(bcrypt.hash(password, 10)),
             }).save();
 
-            // if (newHost) {
-            return res.status(201).json({
-                username: newHost.hostName,
-            });
-            // };
+            if (newHost) {
+                return res.status(201).json({
+                    username: newHost.username,
+                });
+            };
 
         } else {
             return res.status(403).json({ data: "user already exists" });

@@ -18,8 +18,8 @@ const {
 const operatorRoute = express.Router();
 
 operatorRoute.get('/', httpsGetOperators);
-operatorRoute.post('/', loginOperator)
-operatorRoute.post('/signup', signupHost)
+operatorRoute.post('/', loginOperator);
+operatorRoute.post('/signup', signupHost);
 
 operatorRoute.post('/add', httpsAddOperator);
 operatorRoute.post('/modify', modifyOperator);

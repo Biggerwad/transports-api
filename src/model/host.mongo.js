@@ -13,9 +13,11 @@ const hostSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-
+    requests: {
+        type: Object,
+    }
 },
     { timestamps: true }
 )
 
-module.exports = mongoose.Model('Host', hostSchema);
+module.exports = mongoose.model('Host', hostSchema);
