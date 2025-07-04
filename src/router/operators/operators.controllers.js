@@ -5,6 +5,7 @@ const Users = require('../../model/user.mongo');
 const FormStatus = require('../../model/formStatus');
 const bcrypt = require("bcrypt");
 const { mongoose } = require('mongoose');
+const welcomeEmail = require('../../services/nodemailer');
 
 // Get all operators route:
 async function httpsGetOperators(req, res) {
@@ -147,35 +148,52 @@ async function signinHost(req, res) {
             // token:
             msg: "login successful"
         })
-        
+
         // give host a session ID and sign jwt token
     }
 };
 
 async function signupHost(req, res) {
     const { username, email, password } = req.body;
-
+    const saltRounds = 10;
     // check if account exists already
 
     try {
         const hostExist = await host.findOne({ username, email: email });
 
         if (!hostExist) {
+
+            hashedPassword = bcrypt.hash(password, saltRounds, (err, hash) => {
+                if (err) {
+                    console.error('Error hashing password:', err);
+                    return;
+                }
+                console.log('Hashed password:', hash);
+                // Store this 'hash' in your database
+            });
+
             // create account for host
             const newHost = await new host({
+                hostId: Math.floor(Math.random() * 9000000) + 1000000,
                 username: username,
                 email: email,
-                password: String(bcrypt.hash(password, 10)),
+                password: String(hashedPassword),
             }).save();
 
             if (newHost) {
+                const sendWelcome = await welcomeEmail(newHost);
+
                 return res.status(201).json({
+                    ok: true,
+                    hostId: newHost.hostId,
                     username: newHost.username,
                 });
+
+                // Add emailSent flag and resend logic
             };
 
         } else {
-            return res.status(403).json({ data: "user already exists" });
+            return res.status(403).json({ ok: false, data: "user already exists" });
         }
 
     } catch (err) {

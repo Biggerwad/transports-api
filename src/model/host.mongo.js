@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const hostSchema = new mongoose.Schema({
+    hostId: {
+        type: Number,
+        required: true,
+        // min: 7,
+        // max: 7,
+    },
     username: {
         type: String,
         required: true,
