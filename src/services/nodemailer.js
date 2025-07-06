@@ -26,15 +26,16 @@ async function welcomeEmail(user) {
 
   const templateString = fs.readFileSync('./templates/welcome.hbs', 'utf-8');
 
-  const template = handlebars.compile(templateString);
+  const template = handlebars.compile(templateString, {
+    allowProtoPropertiesByDefault: true
+  });
   const output = template(user);
-  console.log(output);
 
   let mailOptions = {
     from: process.env.EMAIL_ADDRESS,
-    to: emails,
+    to: user.email,
     subject: 'Welcome to Commute!',
-    text: output,
+    html: output,
   };
 
   transporter.sendMail(mailOptions, function (error, info) {

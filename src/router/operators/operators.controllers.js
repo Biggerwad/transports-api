@@ -163,32 +163,30 @@ async function signupHost(req, res) {
 
         if (!hostExist) {
 
-            hashedPassword = bcrypt.hash(password, saltRounds, (err, hash) => {
-                if (err) {
-                    console.error('Error hashing password:', err);
-                    return;
-                }
-                console.log('Hashed password:', hash);
-                // Store this 'hash' in your database
-            });
+            const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-            // create account for host
-            const newHost = await new host({
+            const stageUser = {
                 hostId: Math.floor(Math.random() * 9000000) + 1000000,
                 username: username,
                 email: email,
                 password: String(hashedPassword),
-            }).save();
+            };
+
+            // create account for host
+            const newHost = await new host(stageUser).save();
 
             if (newHost) {
-                const sendWelcome = await welcomeEmail(newHost);
+                const sendWelcome = await welcomeEmail(stageUser);
+
+                if (sendWelcome) {
+                    await host.findOneAndUpdate({ email }, { emailSent: sendWelcome }, { upsert: true })
+                }
 
                 return res.status(201).json({
                     ok: true,
                     hostId: newHost.hostId,
                     username: newHost.username,
                 });
-
                 // Add emailSent flag and resend logic
             };
 
@@ -198,7 +196,7 @@ async function signupHost(req, res) {
 
     } catch (err) {
         res.status(500).json({
-            err
+            err: err.message
         })
     }
 }
