@@ -6,7 +6,6 @@ const morgan = require('morgan');
 const operatorRoute = require('./router/operators/operators.router');
 const userRoute = require('./router/users/users.router')
 
-
 const app = express();
 
 app.use(express.json());

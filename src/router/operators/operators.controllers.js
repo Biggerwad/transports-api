@@ -17,7 +17,41 @@ async function httpsGetContainers(req, res) {
 }
 
 async function getFormStatus(req, res) {
-    return res.status(200).json(await FormStatus.find())
+    // check if form exists
+    const { hostId, formId } = req.params;
+
+    // check if the form exists
+
+    let formExists;
+
+    try {
+        formExists = await host.findOne({ hostId, formId });
+
+        if (!formExists) {
+            return res.status(403).json({
+                ok: false,
+                msg: "form does not exist"
+            });
+        };
+
+        // if it does, check for the form status
+
+        // revamp this to return boolean
+        const dForm = await FormStatus.find();
+
+        if (!dForm) {
+            res.status(403).json({ ok: false, msg: "form is closed" })
+        } else {
+            return res.status(200).json({ ok: true, msg: "form exists" });
+        }
+
+        delete formExists;
+
+    } catch (err) {
+        return res.status(500).json({
+            msg: msg.message,
+        })
+    }
 }
 
 async function setFormStatus(req, res) {
@@ -201,6 +235,12 @@ async function signupHost(req, res) {
     }
 }
 
+async function checkValidForm(req, res) {
+    const { hostId, formId } = req.body;
+
+
+}
+
 async function modifyOperator(req, res) {
     const { id, fullName, email, privilege } = req.body;
 
@@ -254,6 +294,7 @@ module.exports = {
     httpsGetContainers,
     loginOperator,
     signupHost,
+    checkValidForm,
     httpsAddOperator,
     httpsAddContainer,
     modifyOperator,

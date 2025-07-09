@@ -11,7 +11,8 @@ const {
     httpsGetContainers,
     getFormStatus,
     setFormStatus,
-    signupHost
+    signupHost,
+    checkValidForm
 } = require('./operators.controllers');
 // const addOperator = require('./operators.controllers')
 
@@ -20,6 +21,7 @@ const operatorRoute = express.Router();
 operatorRoute.get('/', httpsGetOperators);
 operatorRoute.post('/', loginOperator);
 operatorRoute.post('/signup', signupHost);
+// operatorRoute.post('/form', checkValidForm);
 
 operatorRoute.post('/add', httpsAddOperator);
 operatorRoute.post('/modify', modifyOperator);
@@ -30,7 +32,7 @@ operatorRoute.get('/assign', httpsGetContainers);
 operatorRoute.post('/status', updateRequest)
 
 operatorRoute.get('/formstatus', getFormStatus)
-operatorRoute.post('/formstatus', setFormStatus)
+operatorRoute.post('/formstatus?hostId', setFormStatus)
 
 // operatorRoute.delete('/deleteoperator', httpsDeleteOperator)
 

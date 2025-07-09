@@ -19,8 +19,12 @@ const hostSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    requests: {
-        type: Object,
+    // requests: {
+    //     type: Object,
+    // },
+    formID: {
+        type: Number,
+        min: 7,
     }
 },
     { timestamps: true }
