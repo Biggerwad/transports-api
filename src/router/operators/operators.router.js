@@ -31,8 +31,8 @@ operatorRoute.get('/assign', httpsGetContainers);
 
 operatorRoute.post('/status', updateRequest)
 
-operatorRoute.get('/formstatus', getFormStatus)
-operatorRoute.post('/formstatus?hostId', setFormStatus)
+operatorRoute.get('/formstatus/:hostId/:formId', getFormStatus)
+operatorRoute.post('/formstatus', setFormStatus)
 
 // operatorRoute.delete('/deleteoperator', httpsDeleteOperator)
 

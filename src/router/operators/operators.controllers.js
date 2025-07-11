@@ -9,8 +9,10 @@ const welcomeEmail = require('../../services/nodemailer');
 
 // Get all operators route:
 async function httpsGetOperators(req, res) {
-    return res.status(200).json(await operators.find())
+    return res.status(200).json(await host.find())
 }
+
+// implement httpsGetHosts also
 
 async function httpsGetContainers(req, res) {
     return res.status(200).json(await Container.find())
@@ -40,12 +42,14 @@ async function getFormStatus(req, res) {
         const dForm = await FormStatus.find();
 
         if (!dForm) {
-            res.status(403).json({ ok: false, msg: "form is closed" })
+          return res.status(403).json({ ok: false, msg: "form is closed" })
         } else {
-            return res.status(200).json({ ok: true, msg: "form exists" });
+            return res.status(200).json({ ok: true, status: dForm[0].status, owner: formExists.username, msg: "form exists" });
         }
 
+        formExists, dForm = null;
         delete formExists;
+        delete dForm;
 
     } catch (err) {
         return res.status(500).json({
