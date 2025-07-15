@@ -1,22 +1,24 @@
 const operators = require('../../model/operator.mongo');
 const host = require('../../model/host.mongo');
+const Token = require('../../model/token.model');
 const Container = require('../../model/container.mongo');
 const Users = require('../../model/user.mongo');
 const FormStatus = require('../../model/formStatus');
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const { mongoose } = require('mongoose');
-const welcomeEmail = require('../../services/nodemailer');
+const { welcomeEmail, passwordResetLink, resetEmail } = require('../../services/nodemailer');
 
 // Get all operators route:
 async function httpsGetOperators(req, res) {
     return res.status(200).json(await host.find())
-}
+};
 
 // implement httpsGetHosts also
 
 async function httpsGetContainers(req, res) {
     return res.status(200).json(await Container.find())
-}
+};
 
 async function getFormStatus(req, res) {
     // check if form exists
@@ -42,7 +44,7 @@ async function getFormStatus(req, res) {
         const dForm = await FormStatus.find();
 
         if (!dForm) {
-          return res.status(403).json({ ok: false, msg: "form is closed" })
+            return res.status(403).json({ ok: false, msg: "form is closed" })
         } else {
             return res.status(200).json({ ok: true, status: dForm[0].status, owner: formExists.username, msg: "form exists" });
         }
@@ -239,10 +241,93 @@ async function signupHost(req, res) {
     }
 }
 
-async function checkValidForm(req, res) {
-    const { hostId, formId } = req.body;
+// password reset logic---
+// when request hits server
+// check if the email is a valid one.
+// if true, check token model if the token exists, delete it
+// then create a token and store it in a separate DB with the email and password
+/* send password reset link to user with token*/
+// once clicked --> frontend --> send new password to server and encrypt it and update storage
+// Frontend, redirect user to sign in page to input new password
+
+async function requestPasswordReset(req, res) {
+    const { email } = req.body;
+
+    const hostExist = await host.findOne({ email: email });
+
+    if (!hostExist) {
+        return res.status(401).json({ ok: false, msg: "Host does not exist" });
+    };
+
+    // check for token in DB
+    let tokenExist = await Token.findOne({ userId: hostExist._id });
+
+    if (tokenExist) {
+        Token.findOneAndDelete({ userId: tokenExist.userId });
+    };
+
+    // hash this later on
+    const newToken = jwt.sign({ _id: hostExist._id }, process.env.SUPER_SECRET, { expiresIn: "30m" });
+
+    // send reset email
+    await new Token({
+        userId: hostExist._id,
+        token: newToken,
+    }).save();
+
+    const resetLink = `${process.env.FE_API}/resetpassword/${newToken}`;
+
+    const sendLink = await passwordResetLink(email, resetLink, hostExist.username);
+
+    delete hostExist;
+
+    if (!sendLink) {
+        return res.status(500).json({ ok: false, msg: "error sending link to user" });
+    } else {
+        return res.status(200).json({ ok: true, msg: "link sent successfully!", token: newToken });
+    };
 
 
+}
+
+async function resetPassword(req, res) {
+    const { token, email, password } = req.body;
+    const saltRounds = 10;
+
+    // check for email
+    let userExists = await host.findOne({ email: email });
+
+    if (!userExists) {
+        return res.status(401).json({ ok: false, msg: "Host does not exist" });
+    };
+
+    // check for token
+    let tokenExist = await Token.findOne({ token });
+
+    if (!tokenExist) {
+        return res.status(404).json({ ok: false, msg: "Invalid or expired Token" });
+    };
+
+    const hash = await bcrypt.hash(password, saltRounds);
+    // reset password
+    await host.updateOne({ email }, { $set: { password: hash } }, { new: true });
+
+    // send reset email
+    const successEmail = await resetEmail(email, userExists.username);
+    
+    // delete token
+    await tokenExist.deleteOne();
+
+    userExists = null;
+    delete userExists;
+
+    if (!successEmail) {
+        return res.status(500).json({ ok: false, msg: "error sending link to user" });
+    } else {
+        return res.status(200).json({ ok: true, msg: "password reset successful!" });
+    };
+
+    // delete token?
 }
 
 async function modifyOperator(req, res) {
@@ -297,8 +382,9 @@ module.exports = {
     httpsGetOperators,
     httpsGetContainers,
     loginOperator,
+    resetPassword,
+    requestPasswordReset,
     signupHost,
-    checkValidForm,
     httpsAddOperator,
     httpsAddContainer,
     modifyOperator,

@@ -29,6 +29,7 @@ async function welcomeEmail(user) {
   const template = handlebars.compile(templateString, {
     allowProtoPropertiesByDefault: true
   });
+
   const output = template(user);
 
   let mailOptions = {
@@ -50,4 +51,59 @@ async function welcomeEmail(user) {
 
 };
 
-module.exports = welcomeEmail;
+async function passwordResetLink(email, resetLink, user) {
+
+  const templateString = fs.readFileSync('./templates/passwordReset.hbs', 'utf-8');
+
+  const template = handlebars.compile(templateString, {
+    allowProtoPropertiesByDefault: true
+  });
+
+  const output = template({ resetLink, user });
+
+  let mailOptions = {
+    from: process.env.EMAIL_ADDRESS,
+    to: email,
+    subject: 'Password Reset Request',
+    html: output,
+  };
+  
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+
+async function resetEmail(email, username) {
+
+  const templateString = fs.readFileSync('./templates/resetSuccess.hbs', 'utf-8');
+
+  const template = handlebars.compile(templateString, {
+    allowProtoPropertiesByDefault: true
+  });
+
+  const output = template({ username });
+
+  let mailOptions = {
+    from: process.env.EMAIL_ADDRESS,
+    to: email,
+    subject: 'Password Reset Success',
+    html: output,
+  };
+
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+  ;}
+  
+}
+
+module.exports = { welcomeEmail, passwordResetLink, resetEmail };
