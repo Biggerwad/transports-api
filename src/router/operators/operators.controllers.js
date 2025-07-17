@@ -55,7 +55,7 @@ async function getFormStatus(req, res) {
 
     } catch (err) {
         return res.status(500).json({
-            msg: msg.message,
+            msg: err.message,
         })
     }
 }
@@ -314,7 +314,7 @@ async function resetPassword(req, res) {
 
     // send reset email
     const successEmail = await resetEmail(email, userExists.username);
-    
+
     // delete token
     await tokenExist.deleteOne();
 

@@ -77,7 +77,6 @@ async function passwordResetLink(email, resetLink, user) {
   }
 }
 
-
 async function resetEmail(email, username) {
 
   const templateString = fs.readFileSync('./templates/resetSuccess.hbs', 'utf-8');
