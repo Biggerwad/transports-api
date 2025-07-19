@@ -22,9 +22,17 @@ const hostSchema = new mongoose.Schema({
     // requests: {
     //     type: Object,
     // },
-    formID: {
+    formId: {
         type: Number,
         min: 7,
+    },
+    privilege: {
+        type: String,
+        required: true,
+    },
+    confirmed: {
+        type: Boolean,
+        default: false,
     }
 },
     { timestamps: true }

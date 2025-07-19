@@ -22,7 +22,7 @@ let transporter = nodemailer.createTransport({
   }
 });
 
-async function welcomeEmail(user) {
+async function welcomeEmail(user, confLink) {
 
   const templateString = fs.readFileSync('./templates/welcome.hbs', 'utf-8');
 
@@ -30,7 +30,7 @@ async function welcomeEmail(user) {
     allowProtoPropertiesByDefault: true
   });
 
-  const output = template(user);
+  const output = template(user, confLink);
 
   let mailOptions = {
     from: process.env.EMAIL_ADDRESS,
@@ -67,7 +67,7 @@ async function passwordResetLink(email, resetLink, user) {
     subject: 'Password Reset Request',
     html: output,
   };
-  
+
   try {
     await transporter.sendMail(mailOptions);
     return true;
@@ -101,8 +101,39 @@ async function resetEmail(email, username) {
   } catch (error) {
     console.error(error);
     return false;
-  ;}
-  
+    ;
+  }
+
 }
 
-module.exports = { welcomeEmail, passwordResetLink, resetEmail };
+
+async function sendConf(email, link) {
+
+  const templateString = fs.readFileSync('./templates/resetSuccess.hbs', 'utf-8');
+
+  const template = handlebars.compile(templateString, {
+    allowProtoPropertiesByDefault: true
+  });
+
+  const output = template({ username });
+
+  let mailOptions = {
+    from: process.env.EMAIL_ADDRESS,
+    to: email,
+    subject: 'Password Reset Success',
+    html: output,
+  };
+
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+    ;
+  }
+
+}
+
+module.exports = { welcomeEmail, passwordResetLink, resetEmail, sendConf };

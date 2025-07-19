@@ -159,8 +159,9 @@ async function loginOperator(req, res) {
     const { username, email } = req.body;
     let hostExist;
 
+    hostExist = await host.findOne({ username, email: email });
+
     try {
-        hostExist = await host.findOne({ username, email: email });
         if (hostExist) {
             return res.status(200).json({ ok: true, operator: hostExist });
         } else {
@@ -173,24 +174,35 @@ async function loginOperator(req, res) {
 };
 
 async function signinHost(req, res) {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
     // look up this host first
-    const hostExist = await host.findOne({ username });
+    const hostExist = await host.findOne({ email });
 
-    if (hostExist) {
+    if (!hostExist) {
+        return res.status(401).json({ ok: false, msg: "Operator does not exist" });
+    };
+
+    try {
         // check for valid password
         let passwordValid = bcrypt.compare(password, hostExist.password);
 
-        if (!passwordValid) return res.status(401).json({ msg: "Incorrect credentials" })
+        if (!passwordValid) return res.status(401).json({ ok: false, msg: "Incorrect credentials" })
 
         return res.status(200).json({
             // token:
-            msg: "login successful"
+            ok: true,
+            msg: "login successful",
+            operator: hostExist,
         })
 
-        // give host a session ID and sign jwt token
+    } catch (err) {
+        res.status(500).json({
+            err: err.message
+        })
     }
+
+    // give host a session ID and sign jwt token
 };
 
 async function signupHost(req, res) {
@@ -210,13 +222,20 @@ async function signupHost(req, res) {
                 username: username,
                 email: email,
                 password: String(hashedPassword),
+                formId: Math.floor((Math.random() * 1000000) + 7000000),
+                privilege: "Admin",
             };
 
             // create account for host
             const newHost = await new host(stageUser).save();
 
+            const token = jwt.sign({ email: stageUser.email }, process.env.SUPER_SECRET, { expiresIn: "30m" });
+
+
+            const confLink = `${process.env.FE_API}/confirm/${token}`;
+
             if (newHost) {
-                const sendWelcome = await welcomeEmail(stageUser);
+                const sendWelcome = await welcomeEmail(stageUser, confLink);
 
                 if (sendWelcome) {
                     await host.findOneAndUpdate({ email }, { emailSent: sendWelcome }, { upsert: true })
@@ -240,6 +259,50 @@ async function signupHost(req, res) {
         })
     }
 }
+
+// CONFIRM EMAIL
+
+async function confirmEmail(req, res) {
+    const { token } = req.params();
+
+    // look up this host first
+    const hostExist = await host.findOne({ email });
+
+    if (!hostExist) {
+        return res.status(401).json({ ok: false, msg: "Operator does not exist" });
+    };
+
+    // confirm token
+
+    // check for token
+    let tokenExist = await Token.findOne({ token });
+
+    if (!tokenExist) {
+        return res.status(404).json({ ok: false, msg: "Invalid or expired Token" });
+    };
+
+    // delete token
+    await tokenExist.deleteOne();
+
+    try {
+        const confirm = await host.findOneAndUpdate({ email }, { $set: { confirmed: true } })
+        if (!confirm) return res.status(401).json({ ok: false, msg: "Unable to confirm" });
+
+        return res.status(200).json({
+            // token:
+            ok: true,
+            msg: "Confirmed",
+            operator: hostExist,
+        })
+
+    } catch (err) {
+        res.status(500).json({
+            err: err.message
+        })
+    }
+
+    // give host a session ID and sign jwt token
+};
 
 // password reset logic---
 // when request hits server
@@ -291,18 +354,18 @@ async function requestPasswordReset(req, res) {
 }
 
 async function resetPassword(req, res) {
-    const { token, email, password } = req.body;
+    const { token, password } = req.body;
     const saltRounds = 10;
 
     // check for email
-    let userExists = await host.findOne({ email: email });
+    // let userExists = await host.findOne({ email: email });
 
-    if (!userExists) {
-        return res.status(401).json({ ok: false, msg: "Host does not exist" });
-    };
+    // if (!userExists) {
+    //     return res.status(401).json({ ok: false, msg: "Host does not exist" });
+    // };
 
     // check for token
-    let tokenExist = await Token.findOne({ token });
+    let tokenExist = await Token.findOne({ token: token });
 
     if (!tokenExist) {
         return res.status(404).json({ ok: false, msg: "Invalid or expired Token" });
@@ -383,7 +446,9 @@ module.exports = {
     httpsGetContainers,
     loginOperator,
     resetPassword,
+    confirmEmail,
     requestPasswordReset,
+    signinHost,
     signupHost,
     httpsAddOperator,
     httpsAddContainer,

@@ -14,17 +14,22 @@ const {
     signupHost,
     checkValidForm,
     requestPasswordReset,
-    resetPassword
+    resetPassword,
+    signinHost,
+    confirmEmail
 } = require('./operators.controllers');
 // const addOperator = require('./operators.controllers')
 
 const operatorRoute = express.Router();
 
 operatorRoute.get('/', httpsGetOperators);
-operatorRoute.post('/', loginOperator);
+operatorRoute.post('/', signinHost);
+operatorRoute.get('/confirm/:token', confirmEmail)
+// add logic for operator signin
+
 operatorRoute.post('/signup', signupHost);
 // operatorRoute.post('/form', checkValidForm);
-operatorRoute.post('/resetrequest',requestPasswordReset);
+operatorRoute.post('/resetrequest', requestPasswordReset);
 operatorRoute.post('/resetpassword', resetPassword);
 
 operatorRoute.post('/add', httpsAddOperator);
