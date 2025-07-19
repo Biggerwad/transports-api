@@ -156,19 +156,28 @@ async function httpsAddContainer(req, res) {
 
 // Login host
 async function loginOperator(req, res) {
-    const { username, email } = req.body;
+    const { hostId, email, type } = req.body;
     let hostExist;
 
-    hostExist = await host.findOne({ username, email: email });
+    hostExist = await host.findOne({ hostId });
 
     try {
         if (hostExist) {
+            // look for operator under host
+            if (type === "operator") {
+                const operatorExist = hostExist.operators.filter((x) => { x.email == email });
+                if (!operatorExist) { return res.status(401).json({ ok: false, msg: "Operator does not exist" }) } else {
+                    return res.status(200).json({ ok: true, operator: operatorExist });
+                }
+            };
+
+            // Merge host signin logic here to compare password and find without hostId
             return res.status(200).json({ ok: true, operator: hostExist });
         } else {
-            return res.status(401).json({ ok: false, msg: "Operator does not exist" })
+            return res.status(401).json({ ok: false, msg: "Host does not exist" })
         }
     } catch (err) {
-        return res.status(500).json({ msg: err });
+        return res.status(500).json({ ok: false, msg: err });
     };
 
 };
@@ -193,6 +202,7 @@ async function signinHost(req, res) {
             // token:
             ok: true,
             msg: "login successful",
+            // don't return password here fix it
             operator: hostExist,
         })
 
@@ -210,11 +220,10 @@ async function signupHost(req, res) {
     const saltRounds = 10;
     // check if account exists already
 
+    const hostExist = await host.findOne({ username, email: email });
+
     try {
-        const hostExist = await host.findOne({ username, email: email });
-
         if (!hostExist) {
-
             const hashedPassword = await bcrypt.hash(password, saltRounds);
 
             const stageUser = {
@@ -231,7 +240,6 @@ async function signupHost(req, res) {
 
             const token = jwt.sign({ email: stageUser.email }, process.env.SUPER_SECRET, { expiresIn: "30m" });
 
-
             const confLink = `${process.env.FE_API}/confirm/${token}`;
 
             if (newHost) {
@@ -241,13 +249,32 @@ async function signupHost(req, res) {
                     await host.findOneAndUpdate({ email }, { emailSent: sendWelcome }, { upsert: true })
                 }
 
+                // make host an operator too. can't be deleted though
+                const makeOperator = await host.updateOne({ username }, {
+                    $push: {
+                        operators: {
+                            fullName: stageUser.username,
+                            email: stageUser.email,
+                            privilege: stageUser.privilege,
+                        }
+                    }
+                });
+                // Handle operator delete operation too...
+
+                if (!makeOperator) {
+                    return res.status(403).json({ ok: false, data: "unable to make host an operator" });
+                };
+
                 return res.status(201).json({
                     ok: true,
                     hostId: newHost.hostId,
-                    username: newHost.username,
+                    formId: newHost.formId,
+                    // operators: newHost.operators,
                 });
                 // Add emailSent flag and resend logic
-            };
+            }
+
+            // insert else statement here
 
         } else {
             return res.status(403).json({ ok: false, data: "user already exists" });
