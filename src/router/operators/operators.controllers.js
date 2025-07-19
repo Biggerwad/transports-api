@@ -11,6 +11,8 @@ const { welcomeEmail, passwordResetLink, resetEmail } = require('../../services/
 
 // Get all operators route:
 async function httpsGetOperators(req, res) {
+
+    
     return res.status(200).json(await host.find())
 };
 
@@ -78,33 +80,55 @@ async function setFormStatus(req, res) {
 
 async function httpsAddOperator(req, res) {
     const {
+        hostId,
         fullName,
         email,
         privilege,
     } = req.body
 
-    let existingOperator;
+    let existingOperator, hostExist;
+
+    hostExist = await host.findOne({ hostId });
+
+    existingOperator = hostExist.operators.filter((x) => { x.email === email });
 
     try {
-        existingOperator = await operators.findOne({ email: email });
+        if (hostExist) {
 
-        if (existingOperator) {
-            return res.status(403).json({ error: "Admin already exists" });
+            // Check for operator under host
+            if (existingOperator) {
+                return res.status(403).json({ ok: false, msg: "Operator already exists" });
+            };
+
+            // Append into host' operators array 
+            const newOperator = await new operators({
+                hostId,
+                fullName,
+                email,
+                privilege,
+            }).save()
+
+            const appendOperator = await hostExist.operators.push(newOperator).save();
+
+            if (appendOperator) {
+
+                // delete appendOperator;
+                // handle the parsing of this data objects
+                return res.status(201).json({
+                    data: {
+                        operatorName: newOperator.fullName,
+                        email: newOperator.email,
+                        privilege: newOperator.privilege,
+                    }
+                });
+            } else {
+                return res.status(403).json({ ok: false, msg: "Unable to append operator under host" });
+            };
+
+
+        } else {
+            return res.status(403).json({ ok: false, msg: "Host does not exist" });
         }
-
-        const newOperator = await new operators({
-            fullName,
-            email,
-            privilege,
-        }).save()
-
-        return res.status(201).json({
-            data: {
-                operatorName: newOperator.fullName,
-                email: newOperator.email,
-                privilege: newOperator.privilege,
-            }
-        });
 
     } catch (err) {
         data: {
@@ -156,7 +180,7 @@ async function httpsAddContainer(req, res) {
 
 // Login host
 async function loginOperator(req, res) {
-    const { hostId, email, type } = req.body;
+    const { hostId, email, opType } = req.body;
     let hostExist;
 
     hostExist = await host.findOne({ hostId });
@@ -164,7 +188,7 @@ async function loginOperator(req, res) {
     try {
         if (hostExist) {
             // look for operator under host
-            if (type === "operator") {
+            if (opType === "Operator") {
                 const operatorExist = hostExist.operators.filter((x) => { x.email == email });
                 if (!operatorExist) { return res.status(401).json({ ok: false, msg: "Operator does not exist" }) } else {
                     return res.status(200).json({ ok: true, operator: operatorExist });
@@ -253,6 +277,7 @@ async function signupHost(req, res) {
                 const makeOperator = await host.updateOne({ username }, {
                     $push: {
                         operators: {
+                            hostId: stageUser.hostId,
                             fullName: stageUser.username,
                             email: stageUser.email,
                             privilege: stageUser.privilege,

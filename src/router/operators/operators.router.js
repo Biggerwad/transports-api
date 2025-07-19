@@ -22,7 +22,7 @@ const {
 
 const operatorRoute = express.Router();
 
-operatorRoute.get('/', httpsGetOperators);
+operatorRoute.get('/:hostId', httpsGetOperators);
 operatorRoute.post('/', signinHost);
 operatorRoute.get('/confirm/:token', confirmEmail)
 // add logic for operator signin
