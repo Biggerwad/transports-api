@@ -12,7 +12,7 @@ const { welcomeEmail, passwordResetLink, resetEmail } = require('../../services/
 // Get all operators route:
 async function httpsGetOperators(req, res) {
 
-    
+
     return res.status(200).json(await host.find())
 };
 
@@ -270,7 +270,7 @@ async function signupHost(req, res) {
                 const sendWelcome = await welcomeEmail(stageUser, confLink);
 
                 if (sendWelcome) {
-                    await host.findOneAndUpdate({ email }, { emailSent: sendWelcome }, { upsert: true })
+                    await host.updateOne({ email }, { emailSent: sendWelcome }, { upsert: true })
                 }
 
                 // make host an operator too. can't be deleted though
@@ -296,6 +296,7 @@ async function signupHost(req, res) {
                     formId: newHost.formId,
                     // operators: newHost.operators,
                 });
+
                 // Add emailSent flag and resend logic
             }
 
@@ -327,7 +328,7 @@ async function confirmEmail(req, res) {
     // confirm token
 
     // check for token
-    let tokenExist = await Token.findOne({ token });
+    let tokenExist = await Token.findOne({ token: token });
 
     if (!tokenExist) {
         return res.status(404).json({ ok: false, msg: "Invalid or expired Token" });
@@ -337,7 +338,7 @@ async function confirmEmail(req, res) {
     await tokenExist.deleteOne();
 
     try {
-        const confirm = await host.findOneAndUpdate({ email }, { $set: { confirmed: true } })
+        const confirm = await host.updateOne({ email }, { $set: { confirmed: true } })
         if (!confirm) return res.status(401).json({ ok: false, msg: "Unable to confirm" });
 
         return res.status(200).json({
@@ -349,6 +350,7 @@ async function confirmEmail(req, res) {
 
     } catch (err) {
         res.status(500).json({
+            ok: false,
             err: err.message
         })
     }

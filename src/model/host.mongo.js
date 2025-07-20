@@ -5,7 +5,7 @@ const hostSchema = new mongoose.Schema({
     hostId: {
         type: Number,
         required: true,
-        unique:true,
+        unique: true,
         // min: 7,
         // max: 7,
     },
@@ -24,10 +24,10 @@ const hostSchema = new mongoose.Schema({
         required: true,
     },
     operators: [Operators],
-    // formData: {
-    //     type: Array,
-    // inside each formdata we will have formId
-    // },
+    formData: {
+        type: Array,
+        // inside each formdata  e will have formId
+    },
     formId: {
         type: Number,
         min: 7,

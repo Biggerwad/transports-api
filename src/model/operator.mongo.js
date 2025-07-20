@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 
 const operatorSchema = new mongoose.Schema({
+    hostId: {
+        type: Number,
+    },
     fullName: {
         type: String,
         required: true,
