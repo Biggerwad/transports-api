@@ -1,21 +1,28 @@
 const Users = require('../../model/user.mongo');
 const Operator = require('../../model/operator.mongo');
+const Hosts = require('../../model/host.mongo');
 
 // Return all registered users
 async function getUsers(req, res) {
-    try {
-        const users = await Users.find({});
-        return res.status(200).json(users);
-    } catch (err) {
-        return res.status(500).json({ message: err.message });
-    }
-}
+    const { hostId } = req.params;
+
+    const hostExist = await Hosts.findOne({ hostId });
+
+    if (!hostExist) return res.status(404).json({ ok: false, msg: "Host does not exist" });
+
+    const allRequests = hostExist.formData;
+    return res.status(200).json(allRequests)
+
+};
 
 // Create user
 async function addUser(req, res) {
     if (!req.body) {
         return res.status(400).json({ message: "Request body is missing" });
     }
+    const { hostId } = req.params;
+
+    if (!hostId) return res.status(404).json({ message: "HostId and formId missing" });
 
     const {
         service,
@@ -31,16 +38,21 @@ async function addUser(req, res) {
 
     if (!service || !fullName || !phone || !numOfPersons || !address || !geolocation) {
         return res.status(400).json({ message: "Missing required fields" });
-    }
+    };
 
     try {
-        let userExist = await Users.findOne({ phone: phone });
+        let hostExist = await Hosts.findOne({ hostId });
 
-        if (userExist) {
-            return res.status(409).json({ message: "User already exists" });
-        }
+        if (!hostExist) return res.status(404).json({ ok: false, msg: "Host does not exist" });
 
-        const newUser = await new Users({
+        let userExist = hostExist.formData.filter((x) => { x.phone === phone });
+
+        if (userExist.length !== 0) {
+            return res.status(409).json({ ok: false, msg: "User already exists" });
+        };
+
+        const newFormData = {
+            hostId: hostId,
             service,
             fullName,
             phone,
@@ -50,15 +62,23 @@ async function addUser(req, res) {
             geolocation,
             feedback,
             status,
-        }).save();
+        };
+
+        const appendFormData = await Hosts.updateOne({ hostId }, {
+            $push: {
+                formData: newFormData
+            }
+        });
+
+        if (!appendFormData) return res.status(404).json({ message: "Unable to append formData to host" });
 
         return res.status(201).json({
-            data: newUser,
+            data: newFormData,
             ok: true,
         });
 
     } catch (err) {
-        return res.status(500).json({ message: err });
+        return res.status(500).json({ ok: false, msg: err.message });
     }
 }
 

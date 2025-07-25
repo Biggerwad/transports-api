@@ -16,7 +16,8 @@ const {
     requestPasswordReset,
     resetPassword,
     signinHost,
-    confirmEmail
+    confirmEmail,
+    httpsGetRequests
 } = require('./operators.controllers');
 // const addOperator = require('./operators.controllers')
 
@@ -25,6 +26,7 @@ const operatorRoute = express.Router();
 operatorRoute.get('/:hostId', httpsGetOperators);
 operatorRoute.post('/', signinHost);
 operatorRoute.get('/confirm/:token', confirmEmail)
+
 // add logic for operator signin
 
 operatorRoute.post('/signup', signupHost);

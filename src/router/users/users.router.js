@@ -3,8 +3,8 @@ const { getUsers, addUser, deleteUser, deleteRequest } = require('./users.contro
 
 const userRoute = express.Router();
 
-userRoute.get('/', getUsers);
-userRoute.post('/', addUser);
+userRoute.get('/:hostId', getUsers);
+userRoute.post('/:hostId', addUser);
 userRoute.delete('/', deleteRequest);
 
 module.exports = userRoute;

@@ -45,16 +45,20 @@
     <div class="container">
         <div class="header">Welcome to Commute! 🎉</div>
 
-        <p>Dear {{HostName}},</p>
+        <p>Dear {{user}},</p>
 
-        <p>Welcome to Commute, we're excited to have you on board. <br> Your account has been successfully created and you're now part of the
+        <p>Welcome to Commute, we're excited to have you on board. <br> Your account has been successfully created and
+            you're now part of the
             Commute community.</p>
 
         <p>Here is your unique Host ID:</p>
         <div class="user-id">{{hostId}}</div>
 
         <p>Clikc link to confirm your account:</p>
-        <div class="user-id">{{confLink}}</div>
+        
+        <div class="user-id">
+            <a href={{confLink}}>Confirm Account</a>
+        </div>
 
         <p>It expires in 30mins</p>
         {{!-- <p><a href="{{loginUrl}}">{{loginUrl}}</a></p> --}}

@@ -30,7 +30,10 @@ async function welcomeEmail(user, confLink) {
     allowProtoPropertiesByDefault: true
   });
 
-  const output = template(user, confLink);
+  const output = template({
+    user: user.username,
+    confLink, hostId: user.hostId
+  });
 
   let mailOptions = {
     from: process.env.EMAIL_ADDRESS,
@@ -59,7 +62,7 @@ async function passwordResetLink(email, resetLink, user) {
     allowProtoPropertiesByDefault: true
   });
 
-  const output = template({ resetLink, user });
+  const output = template({ email, resetLink, user });
 
   let mailOptions = {
     from: process.env.EMAIL_ADDRESS,

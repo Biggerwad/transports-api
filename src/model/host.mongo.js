@@ -39,6 +39,9 @@ const hostSchema = new mongoose.Schema({
     confirmed: {
         type: Boolean,
         default: false,
+    },
+    token: {
+        type: String,
     }
 },
     { timestamps: true }

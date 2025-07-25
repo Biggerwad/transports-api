@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
+    hostId: {
+        type: String,
+    },
     service: {
         type: String,
         required: true,
@@ -41,4 +44,5 @@ const userSchema = new mongoose.Schema({
     { timestamps: true }
 )
 
+// TO append this to host DB, we need receive hostId with request
 module.exports = mongoose.model('Users', userSchema)

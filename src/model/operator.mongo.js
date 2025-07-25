@@ -16,7 +16,7 @@ const operatorSchema = new mongoose.Schema({
     privilege: {
         type: String,
         required: true,
-    },
+    }
 },
     { timestamps: true }
 

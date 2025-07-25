@@ -11,9 +11,19 @@ const { welcomeEmail, passwordResetLink, resetEmail } = require('../../services/
 
 // Get all operators route:
 async function httpsGetOperators(req, res) {
-
-
     return res.status(200).json(await host.find())
+};
+
+async function httpsGetRequests(req, res) {
+    const { hostId } = req.body;
+
+    const hostExist = await host.findOne({ hostId });
+
+    if (!hostExist) return res.status(404).json({ ok: false, msg: "Host does not exist" });
+
+    const allRequests = await hostExist.formData;
+    return res.status(200).json(allRequests)
+
 };
 
 // implement httpsGetHosts also
@@ -90,25 +100,30 @@ async function httpsAddOperator(req, res) {
 
     hostExist = await host.findOne({ hostId });
 
-    existingOperator = hostExist.operators.filter((x) => { x.email === email });
+    // console.log(hostExist.operators);
+    existingOperator = await hostExist.operators.filter((x) => x.email == email);
 
     try {
         if (hostExist) {
-
+            console.log(existingOperator)
             // Check for operator under host
-            if (existingOperator) {
+            if (existingOperator.length !== 0) {
                 return res.status(403).json({ ok: false, msg: "Operator already exists" });
             };
 
             // Append into host' operators array 
-            const newOperator = await new operators({
+            const newOperator = {
                 hostId,
                 fullName,
                 email,
                 privilege,
-            }).save()
+            };
 
-            const appendOperator = await hostExist.operators.push(newOperator).save();
+            const appendOperator = await host.updateOne({ hostId }, {
+                $push: {
+                    operators: newOperator
+                }
+            });
 
             if (appendOperator) {
 
@@ -246,6 +261,8 @@ async function signupHost(req, res) {
 
     const hostExist = await host.findOne({ username, email: email });
 
+    const token = jwt.sign({ email: email }, process.env.SUPER_SECRET, { expiresIn: "30m" });
+
     try {
         if (!hostExist) {
             const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -257,21 +274,20 @@ async function signupHost(req, res) {
                 password: String(hashedPassword),
                 formId: Math.floor((Math.random() * 1000000) + 7000000),
                 privilege: "Admin",
+                token: token,
             };
 
             // create account for host
             const newHost = await new host(stageUser).save();
 
-            const token = jwt.sign({ email: stageUser.email }, process.env.SUPER_SECRET, { expiresIn: "30m" });
-
-            const confLink = `${process.env.FE_API}/confirm/${token}`;
+            const confLink = `${process.env.FE_API}confirm/${token}`;
 
             if (newHost) {
                 const sendWelcome = await welcomeEmail(stageUser, confLink);
 
                 if (sendWelcome) {
-                    await host.updateOne({ email }, { emailSent: sendWelcome }, { upsert: true })
-                }
+                    await host.updateOne({ email }, { $set: { emailSent: sendWelcome } }, { upsert: true })
+                };
 
                 // make host an operator too. can't be deleted though
                 const makeOperator = await host.updateOne({ username }, {
@@ -284,6 +300,7 @@ async function signupHost(req, res) {
                         }
                     }
                 });
+
                 // Handle operator delete operation too...
 
                 if (!makeOperator) {
@@ -308,7 +325,7 @@ async function signupHost(req, res) {
 
     } catch (err) {
         res.status(500).json({
-            err: err.message
+            err: err
         })
     }
 }
@@ -316,44 +333,49 @@ async function signupHost(req, res) {
 // CONFIRM EMAIL
 
 async function confirmEmail(req, res) {
-    const { token } = req.params();
+    const { token } = req.params;
 
     // look up this host first
-    const hostExist = await host.findOne({ email });
+    // const hostExist = await host.findOne({ email });
 
-    if (!hostExist) {
-        return res.status(401).json({ ok: false, msg: "Operator does not exist" });
-    };
+    // if (!hostExist) {
+    //     return res.status(401).json({ ok: false, msg: "Operator does not exist" });
+    // };
 
     // confirm token
 
-    // check for token
-    let tokenExist = await Token.findOne({ token: token });
+    jwt.verify(token, process.env.SUPER_SECRET, async (err, decodedData) => {
+        if (err) {
+            return res.status(404).json({ ok: false, msg: "Invalid or expired Token" });
+        } else {
+            try {
+                const confirm = await host.updateOne({ token }, { $set: { confirmed: true } })
+                if (!confirm) return res.status(401).json({ ok: false, msg: "Unable to confirm" });
 
-    if (!tokenExist) {
-        return res.status(404).json({ ok: false, msg: "Invalid or expired Token" });
-    };
+                return res.status(200).json({
+                    // token:
+                    ok: true,
+                    msg: "Confirmed",
+                    // Exclude hashed password
+                    // operator: hostExist,
+                })
 
-    // delete token
-    await tokenExist.deleteOne();
+            } catch (err) {
+                res.status(500).json({
+                    ok: false,
+                    err: err.message
+                })
+            }
+        }
+    })
 
-    try {
-        const confirm = await host.updateOne({ email }, { $set: { confirmed: true } })
-        if (!confirm) return res.status(401).json({ ok: false, msg: "Unable to confirm" });
+    // if (!tokenExist) {
+    //     return res.status(404).json({ ok: false, msg: "Invalid or expired Token" });
+    // };
 
-        return res.status(200).json({
-            // token:
-            ok: true,
-            msg: "Confirmed",
-            operator: hostExist,
-        })
+    // // delete token
+    // await tokenExist.deleteOne();
 
-    } catch (err) {
-        res.status(500).json({
-            ok: false,
-            err: err.message
-        })
-    }
 
     // give host a session ID and sign jwt token
 };
@@ -403,9 +425,7 @@ async function requestPasswordReset(req, res) {
     } else {
         return res.status(200).json({ ok: true, msg: "link sent successfully!", token: newToken });
     };
-
-
-}
+};
 
 async function resetPassword(req, res) {
     const { token, password } = req.body;
@@ -418,12 +438,18 @@ async function resetPassword(req, res) {
     //     return res.status(401).json({ ok: false, msg: "Host does not exist" });
     // };
 
-    // check for token
-    let tokenExist = await Token.findOne({ token: token });
+    // check for token validity
+    jwt.verify(token, process.env.SUPER_SECRET, (err, decodedData) => {
+        if (err) {
+            return res.status(404).json({ ok: false, msg: "Invalid or expired Token" });
+        }
+    })
 
-    if (!tokenExist) {
-        return res.status(404).json({ ok: false, msg: "Invalid or expired Token" });
-    };
+    // let tokenExist = await Token.findOne({ token: token });
+
+    // if (!tokenExist) {
+    //     return res.status(404).json({ ok: false, msg: "Invalid or expired Token" });
+    // };
 
     const hash = await bcrypt.hash(password, saltRounds);
     // reset password
@@ -445,14 +471,20 @@ async function resetPassword(req, res) {
     };
 
     // delete token?
-}
+};
 
 async function modifyOperator(req, res) {
-    const { id, fullName, email, privilege } = req.body;
+    const { hostId, fullName, email, privilege } = req.body;
 
-    let foundOperator;
+    const hostExist = await host.findOne({ email: email });
+
+    if (!hostExist) {
+        return res.status(401).json({ ok: false, msg: "Host does not exist" });
+    };
+
+    let updatedOperator;
     try {
-        foundOperator = await operators.findByIdAndUpdate(id, {
+        updatedOperator = await hostExist.findOne({ hostId }, {
             $set: {
                 fullName: fullName,
                 email: email,
@@ -460,12 +492,12 @@ async function modifyOperator(req, res) {
             }
         }, { upsert: true });
 
-        if (!foundOperator) {
+        if (!updatedOperator) {
             res.status(401).json({ msg: "Error updating data" });
             alert('Error Updating operator!');
         }
 
-        res.status(201).json({ Operator: foundOperator });
+        res.status(201).json({ Operator: updatedOperator });
 
     } catch (err) {
         res.status(500).json(err)
@@ -497,6 +529,7 @@ async function updateRequest(req, res) {
 
 module.exports = {
     httpsGetOperators,
+    httpsGetRequests,
     httpsGetContainers,
     loginOperator,
     resetPassword,
